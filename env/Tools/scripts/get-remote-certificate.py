@@ -29,9 +29,8 @@ def fetch_server_certificate (host, port):
             return None
         else:
             tn = tempfile.mktemp()
-            fp = open(tn, "wb")
-            fp.write(m.group(1) + b"\n")
-            fp.close()
+            with open(tn, "wb") as fp:
+                fp.write(m.group(1) + b"\n")
             try:
                 tn2 = (outfile or tempfile.mktemp())
                 cmd = ['openssl', 'x509', '-in', tn, '-out', tn2]
@@ -39,9 +38,8 @@ def fetch_server_certificate (host, port):
                 if status != 0:
                     raise RuntimeError('OpenSSL x509 failed with status %s and '
                                        'output: %r' % (status, output))
-                fp = open(tn2, 'rb')
-                data = fp.read()
-                fp.close()
+                with open(tn2, 'rb') as fp:
+                    data = fp.read()
                 os.unlink(tn2)
                 return data
             finally:

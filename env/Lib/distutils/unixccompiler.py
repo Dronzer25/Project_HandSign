@@ -200,7 +200,8 @@ class UnixCCompiler(CCompiler):
 
                 if sys.platform == 'darwin':
                     linker = _osx_support.compiler_fixup(linker, ld_args)
-                    ld_args = ['-arch', 'x86_64'] + ld_args
+                    from distutils.util import get_host_platform
+                    ld_args = ['-arch', get_host_platform().split("-")[-1]] + ld_args
 
                 self.spawn(linker + ld_args)
             except DistutilsExecError as msg:
@@ -216,7 +217,8 @@ class UnixCCompiler(CCompiler):
         return "-L" + dir
 
     def _is_gcc(self, compiler_name):
-        return "gcc" in compiler_name or "g++" in compiler_name
+        # clang uses same syntax for rpath as gcc
+        return any(name in compiler_name for name in ("gcc", "g++", "clang"))
 
     def runtime_library_dir_option(self, dir):
         # XXX Hackish, at the very least.  See Python bug #445902:
@@ -291,7 +293,7 @@ class UnixCCompiler(CCompiler):
             cflags = sysconfig.get_config_var('CFLAGS')
             m = re.search(r'-isysroot\s*(\S+)', cflags)
             if m is None:
-                sysroot = '/'
+                sysroot = _osx_support._default_sysroot(sysconfig.get_config_var('CC'))
             else:
                 sysroot = m.group(1)
 

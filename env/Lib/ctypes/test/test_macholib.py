@@ -32,10 +32,6 @@ import unittest
 # -bob
 
 from ctypes.macholib.dyld import dyld_find
-try:
-    from _ctypes import _dyld_shared_cache_contains_path
-except ImportError:
-    _dyld_shared_cache_contains_path = None
 
 def find_lib(name):
     possible = ['lib'+name+'.dylib', name+'.dylib', name+'.framework/'+name]
@@ -48,7 +44,6 @@ def find_lib(name):
 
 class MachOTest(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "darwin", 'OSX-specific test')
-    @unittest.skipUnless(_dyld_shared_cache_contains_path, 'macOS 11+ _ctypes support not present.')
     def test_find(self):
         # On Mac OS 11, system dylibs are only present in the shared cache,
         # so symlinks like libpthread.dylib -> libSystem.B.dylib will not
