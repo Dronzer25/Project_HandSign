@@ -1,15 +1,18 @@
 import os
 import os.path
-import pkgutil
 import sys
 import runpy
 import tempfile
+import subprocess
+from importlib import resources
+
+from . import _bundled
+
 
 
 __all__ = ["version", "bootstrap"]
-_PACKAGE_NAMES = ('setuptools', 'pip')
-_SETUPTOOLS_VERSION = "47.1.0"
-_PIP_VERSION = "22.0.4"
+_SETUPTOOLS_VERSION = "79.0.1"
+_PIP_VERSION = "23.0.1"
 _PROJECTS = [
     ("setuptools", _SETUPTOOLS_VERSION, "py3"),
     ("pip", _PIP_VERSION, "py3"),
@@ -17,22 +20,23 @@ _PROJECTS = [
 
 
 def _run_pip(args, additional_paths=None):
-    # Add our bundled software to the sys.path so we can import it
-    if additional_paths is not None:
-        sys.path = additional_paths + sys.path
+    # Run the bootstraping in a subprocess to avoid leaking any state that happens
+    # after pip has executed. Particulary, this avoids the case when pip holds onto
+    # the files in *additional_paths*, preventing us to remove them at the end of the
+    # invocation.
+    code = f"""
+import runpy
+import sys
+sys.path = {additional_paths or []} + sys.path
+sys.argv[1:] = {args}
+runpy.run_module("pip", run_name="__main__", alter_sys=True)
+"""
 
-    # Invoke pip as if it's the main module, and catch the exit.
-    backup_argv = sys.argv[:]
-    sys.argv[1:] = args
-    try:
-        # run_module() alters sys.modules and sys.argv, but restores them at exit
-        runpy.run_module("pip", run_name="__main__", alter_sys=True)
-    except SystemExit as exc:
-        return exc.code
-    finally:
-        sys.argv[:] = backup_argv
-
-    raise SystemError("pip did not exit, this should never happen")
+    cmd = [sys.executable, '-c', code]
+    if sys.flags.isolated:
+        # run code in isolated mode if currently running isolated
+        cmd.insert(1, '-I')
+    return subprocess.run(cmd, check=True).returncode
 
 
 def version():
@@ -80,6 +84,8 @@ def _bootstrap(*, root=None, upgrade=False, user=False,
     if altinstall and default_pip:
         raise ValueError("Cannot use altinstall and default_pip together")
 
+    sys.audit("ensurepip.bootstrap", root)
+
     _disable_pip_configuration_settings()
 
     # By default, installing pip and setuptools installs all of the
@@ -101,9 +107,9 @@ def _bootstrap(*, root=None, upgrade=False, user=False,
         additional_paths = []
         for project, version, py_tag in _PROJECTS:
             wheel_name = "{}-{}-{}-none-any.whl".format(project, version, py_tag)
-            whl = pkgutil.get_data(
-                "ensurepip",
-                "_bundled/{}".format(wheel_name),
+            whl = resources.read_binary(
+                _bundled,
+                wheel_name,
             )
             with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
                 fp.write(whl)

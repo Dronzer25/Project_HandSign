@@ -1,6 +1,10 @@
-train: ../train/images
-val: ../test/images
+train: ../final_data/train/images
+val: ../final_data/test/images
 
-nc: 6
+nc: 32
 
-names: ['Hello', 'IloveYou', 'No', 'Please', 'Thanks', 'Yes']
+names: [
+  'A','B','C','D','E','F','G','H','I','J','K','L','M',
+  'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+  'Hello','IloveYou','No','Please','Thanks','Yes'
+]

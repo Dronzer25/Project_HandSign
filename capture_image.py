@@ -3,9 +3,12 @@ import cv2
 import time
 import uuid
 
-IMAGE_PATH='CollectedImages'
+IMAGE_PATH='Data/CollectedImages'
 
-labels=['Hello','Yes','No', 'Thanks','IloveYou','Please' ]
+labels=['Z']
+
+
+# 'Hello','Yes','No','Thanks','IloveYou','Please','A' , 'B' , 'C' , 'D' , 'E' , 'F'
 
 number_of_images=20
 
@@ -20,8 +23,9 @@ for label in labels:
         imagename=os.path.join(IMAGE_PATH,label,label+'.'+'{}.jpg'.format(str(uuid.uuid1())))
         cv2.imwrite(imagename,frame)
         cv2.imshow('frame',frame)
-        time.sleep(2)
+        time.sleep(1)
         
         if cv2.waitKey(1) & 0xFF==ord('q'):
             break
     cap.release()
+    cv2.destroyAllWindows()
